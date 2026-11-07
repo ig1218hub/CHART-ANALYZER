@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Q-Terminal 관리자</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--bg:#0d1117;--panel:#131a24;--panel2:#18212d;--line:#243041;--line2:#2e3c50;--text:#d6dde8;--muted:#7d8a9c;--dim:#566174;--amber:#f5a524;--amber-dim:rgba(245,165,36,.14);--red:#ef4452;--green:#22c55e;--blue:#3d8bfd;color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none !important}
+html,body{background:var(--bg);color:var(--text)}
+body{font-family:Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;font-feature-settings:"tnum";min-height:100dvh;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+a{color:var(--amber)}
+.top{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{font-weight:800;font-size:16px;letter-spacing:-.02em}
+.brand b{color:var(--amber)}
+.brand small{font-weight:600;color:var(--muted);font-size:12px;margin-left:6px;border:1px solid var(--line2);border-radius:4px;padding:1px 6px}
+.top .sp{flex:1}
+.top .who{color:var(--muted);font-size:13px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:6px;font-weight:700;background:var(--amber);color:#1a1205;white-space:nowrap;text-decoration:none}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line2)}
+.btn.sm{padding:4px 9px;font-size:12px;font-weight:600}
+.btn.danger{color:var(--red);border-color:rgba(239,68,82,.4)}
+.btn.ok{color:var(--green);border-color:rgba(34,197,94,.4)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.auth{max-width:380px;margin:10vh auto 0}
+.auth h1{font-size:20px;margin-bottom:4px}
+.auth p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.field{margin-bottom:12px}
+.field label{display:block;font-weight:600;margin-bottom:4px;font-size:13px}
+.field input,.field select{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:9px 11px;font-size:16px}
+.err{min-height:20px;color:var(--red);font-size:13px;margin:4px 0 10px}
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.stat span{display:block;color:var(--muted);font-size:12px}
+.stat b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.stat.warn b{color:var(--amber)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.row2>*{min-width:0}
+h2{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+h2 small{font-weight:500;color:var(--muted);font-size:12px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.seg{display:flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden}
+.seg button{padding:6px 11px;color:var(--muted);font-size:13px;border-right:1px solid var(--line2)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--amber-dim);color:var(--amber);font-weight:700}
+.seg button i{font-style:normal;font-size:11px;margin-left:3px;opacity:.8}
+.search{flex:1;min-width:160px;background:var(--bg);border:1px solid var(--line2);border-radius:6px;padding:7px 10px;font-size:14px}
+.tbl{overflow-x:auto;margin:0 -16px;padding:0 16px}
+table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+th{color:var(--muted);font-weight:500;font-size:12px;text-align:left;padding:8px;border-bottom:1px solid var(--line2)}
+td{padding:9px 8px;border-bottom:1px solid rgba(36,48,65,.7);vertical-align:middle}
+tr:hover td{background:var(--panel2)}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px}
+.b-active{background:rgba(34,197,94,.14);color:var(--green)}
+.b-pending{background:var(--amber-dim);color:var(--amber)}
+.b-disabled{background:rgba(239,68,82,.14);color:var(--red)}
+.b-admin{background:rgba(61,139,253,.15);color:var(--blue)}
+.b-lock{background:rgba(239,68,82,.14);color:var(--red)}
+.acts{display:flex;gap:4px;flex-wrap:nowrap}
+.me{color:var(--muted);font-size:11px;margin-left:4px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer}
+.opt input{margin-top:3px;accent-color:var(--amber)}
+.opt b{display:block;font-size:13px}
+.opt small{color:var(--muted);font-size:12px}
+.opt:has(input:checked){border-color:var(--amber);background:var(--amber-dim)}
+.help{color:var(--muted);font-size:12px;line-height:1.6}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line2);padding:10px 16px;border-radius:8px;z-index:50;font-size:13px;max-width:92vw;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.toast.show{display:block}
+@media (max-width:980px){.stats{grid-template-columns:repeat(3,1fr)}.row2{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){.wrap{padding:12px}.top{padding:10px 12px}.top .who{display:none}.stats{grid-template-columns:repeat(2,1fr)}.stat b{font-size:19px}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Q</b>-Terminal<small>관리자</small></div>
+  <span class="sp"></span>
+  <span class="who" id="who"></span>
+  <a class="btn ghost sm" href="index.html">앱으로</a>
+  <button class="btn ghost sm" id="btnOut" hidden>로그아웃</button>
+</header>
+
+<main class="wrap" id="app"><div class="empty">불러오는 중…</div></main>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* 동기화 서버(Worker) 주소 — index.html의 APP_CONFIG.SYNC_API와 같게 맞추세요. */
+const API_BASE = 'https://cold-band-ed5d.ghddlsrl1218.workers.dev';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const A = {token: localStorage.getItem('qta_token') || '', me: null, users: [], stats: null, signup: 'approval', filter: 'all', q: ''};
+function toast(m, ms=3000){ const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), ms); }
+async function api(path, {method='GET', body} = {}){
+  const r = await fetch(API_BASE + path, {method, headers:{'content-type':'application/json', ...(A.token ? {authorization:'Bearer ' + A.token} : {})}, body: body ? JSON.stringify(body) : undefined});
+  let j = {}; try{ j = await r.json(); }catch{}
+  if (r.status === 401 && A.token && !path.startsWith('/api/auth/')){ setToken(''); showAuth('로그인이 만료되었습니다.'); throw new Error('로그인 필요'); }
+  if (!r.ok) throw new Error(j.error || ('서버 응답 오류 ' + r.status));
+  return j;
+}
+function setToken(t){ A.token = t; if (t) localStorage.setItem('qta_token', t); else localStorage.removeItem('qta_token'); }
+const fmtDate = t => t ? new Date(t).toLocaleString('ko-KR', {year:'2-digit', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}) : '—';
+const fmtBytes = b => b >= 1048576 ? (b/1048576).toFixed(2) + ' MB' : b >= 1024 ? (b/1024).toFixed(1) + ' KB' : (b || 0) + ' B';
+const ago = t => { if (!t) return '—'; const s = (Date.now() - t)/1000; return s < 60 ? '방금' : s < 3600 ? Math.floor(s/60) + '분 전' : s < 86400 ? Math.floor(s/3600) + '시간 전' : Math.floor(s/86400) + '일 전'; };
+
+/* ---------- 로그인 / 최초 설정 ---------- */
+async function boot(){
+  let st;
+  try{ st = await api('/api/status'); }
+  catch(e){
+    $('#app').innerHTML = `<div class="card auth"><h1>서버에 연결할 수 없습니다</h1><p>${esc(e.message === 'Failed to fetch' ? 'Worker 주소가 맞는지, worker.js가 배포되었는지 확인하세요.' : e.message)}</p><p class="help">현재 서버 주소: ${esc(API_BASE)}<br>admin.html 위쪽의 API_BASE 값을 확인하세요. D1이 연결되지 않았다면 Worker 설정 → 바인딩에서 변수 이름 DB로 연결해야 합니다.</p><button class="btn" onclick="boot()">다시 시도</button></div>`;
+    return;
+  }
+  if (!st.hasUsers){ showAuth('', true); return; }
+  if (!A.token){ showAuth(); return; }
+  try{
+    const j = await api('/api/me'); A.me = j.user;
+    if (A.me.role !== 'admin'){ setToken(''); showAuth('관리자 계정이 아닙니다. 관리자 계정으로 로그인하세요.'); return; }
+    showDash();
+  }catch{ showAuth(); }
+}
+function showAuth(msg='', first=false){
+  $('#btnOut').hidden = true; $('#who').textContent = '';
+  $('#app').innerHTML = `<form class="card auth" id="authForm">
+    <h1>${first ? '첫 관리자 계정 만들기' : '관리자 로그인'}</h1>
+    <p>${first ? '아직 가입한 회원이 없습니다. 지금 만드는 계정이 관리자가 됩니다.' : 'Q-Terminal 회원 관리 페이지입니다.'}</p>
+    <div class="field"><label for="u">아이디</label><input id="u" autocomplete="username" autocapitalize="off" spellcheck="false" required minlength="3" maxlength="30"></div>
+    <div class="field"><label for="p">비밀번호</label><input id="p" type="password" autocomplete="${first ? 'new-password' : 'current-password'}" required minlength="${first ? 8 : 1}"></div>
+    ${first ? '<div class="field"><label for="p2">비밀번호 확인</label><input id="p2" type="password" autocomplete="new-password" required minlength="8"></div>' : ''}
+    <p class="err" id="aerr" role="alert">${esc(msg)}</p>
+    <button class="btn" style="width:100%" id="ago">${first ? '관리자 계정 만들기' : '로그인'}</button>
+  </form>`;
+  $('#u').focus();
+  $('#authForm').onsubmit = async e => {
+    e.preventDefault();
+    const u = $('#u').value.trim(), p = $('#p').value, err = $('#aerr');
+    if (first && p !== $('#p2').value){ err.textContent = '비밀번호 확인이 일치하지 않습니다.'; return; }
+    $('#ago').disabled = true; err.textContent = '';
+    try{
+      const j = await api(first ? '/api/auth/signup' : '/api/auth/login', {method:'POST', body:{username:u, password:p}});
+      if (!j.token){ err.textContent = j.message || '로그인할 수 없습니다.'; return; }
+      if (j.user.role !== 'admin'){ err.textContent = '관리자 계정이 아닙니다.'; api('/api/auth/logout', {method:'POST'}).catch(()=>{}); return; }
+      setToken(j.token); A.me = j.user; showDash();
+    }catch(x){ err.textContent = x.message; }
+    finally{ const b = $('#ago'); if (b) b.disabled = false; }
+  };
+}
+$('#btnOut').onclick = async () => { try{ await api('/api/auth/logout', {method:'POST'}); }catch{} setToken(''); showAuth('로그아웃했습니다.'); };
+
+/* ---------- 대시보드 ---------- */
+async function showDash(){
+  $('#btnOut').hidden = false; $('#who').textContent = A.me.username + ' 님';
+  $('#app').innerHTML = `
+    <section class="stats" id="stats"></section>
+    <div class="row2">
+      <section class="card">
+        <h2>회원 관리 <small id="cnt"></small></h2>
+        <div class="filters">
+          <div class="seg" id="flt"></div>
+          <input class="search" id="q" type="search" placeholder="아이디 검색" value="${esc(A.q)}">
+          <button class="btn ghost sm" id="reload">새로고침</button>
+        </div>
+        <div class="tbl"><table><thead><tr><th>ID</th><th>아이디</th><th>상태</th><th>권한</th><th>가입일</th><th>최근 로그인</th><th style="text-align:right">동기화 데이터</th><th style="text-align:right">접속 기기</th><th>관리</th></tr></thead><tbody id="tb"></tbody></table></div>
+      </section>
+      <aside>
+        <section class="card">
+          <h2>회원가입 방식</h2>
+          <form id="sform">
+            <label class="opt"><input type="radio" name="su" value="approval"><span><b>관리자 승인 후 사용</b><small>누구나 신청할 수 있고, 여기서 승인해야 로그인됩니다. (권장)</small></span></label>
+            <label class="opt"><input type="radio" name="su" value="open"><span><b>자유 가입</b><small>가입 즉시 사용할 수 있습니다.</small></span></label>
+            <label class="opt"><input type="radio" name="su" value="closed"><span><b>가입 막기</b><small>새 가입을 받지 않습니다. 기존 회원은 계속 사용합니다.</small></span></label>
+            <button class="btn" style="width:100%;margin-top:4px">저장</button>
+          </form>
+        </section>
+        <section class="card" style="margin-top:16px">
+          <h2>안내</h2>
+          <p class="help">• 비밀번호는 서버에 암호화(PBKDF2)되어 저장되며 관리자도 볼 수 없습니다. 잊은 경우 "비번 초기화"로 새 비밀번호를 정해 알려주세요.<br>
+          • 로그인 5회 실패 시 10분간 잠기며 "잠금 해제"로 즉시 풀 수 있습니다.<br>
+          • 회원 1명당 최대 5MB까지 즐겨찾기·작도가 저장됩니다.<br>
+          • "접속 기기"는 로그인 상태가 유지 중인 기기 수입니다. "강제 로그아웃"으로 모두 끊을 수 있습니다.</p>
+        </section>
+      </aside>
+    </div>`;
+  $('#q').oninput = e => { A.q = e.target.value.trim().toLowerCase(); renderUsers(); };
+  $('#reload').onclick = load;
+  $('#flt').onclick = e => { const b = e.target.closest('button'); if (!b) return; A.filter = b.dataset.f; renderUsers(); };
+  $('#sform').onsubmit = async e => {
+    e.preventDefault(); const v = new FormData(e.target).get('su');
+    try{ await api('/api/admin/settings', {method:'PUT', body:{signup:v}}); A.signup = v; toast('회원가입 방식을 저장했습니다.'); }catch(x){ toast(x.message); }
+  };
+  $('#tb').onclick = onAction;
+  await load();
+}
+async function load(){
+  try{
+    const [st, us, se] = await Promise.all([api('/api/admin/stats'), api('/api/admin/users'), api('/api/admin/settings')]);
+    A.stats = st; A.users = us.users; A.signup = se.signup;
+    renderStats(); renderUsers();
+    const r = document.querySelector(`#sform input[value="${A.signup}"]`); if (r) r.checked = true;
+  }catch(x){ toast(x.message); }
+}
+function renderStats(){
+  const s = A.stats, u = s.users || {};
+  const card = (l, v, cls='') => `<div class="card stat ${cls}"><span>${l}</span><b>${v}</b></div>`;
+  $('#stats').innerHTML = card('전체 회원', u.total || 0) + card('승인 대기', u.pending || 0, u.pending ? 'warn' : '') + card('활성 회원', u.active || 0)
+    + card('사용 중지', u.disabled || 0) + card('로그인 중인 기기', s.sessions || 0) + card('저장 데이터', fmtBytes(s.bytes));
+}
+function renderUsers(){
+  const n = {all:A.users.length, pending:0, active:0, disabled:0};
+  A.users.forEach(u => n[u.status]++);
+  const tabs = [['all','전체'],['pending','승인 대기'],['active','활성'],['disabled','중지']];
+  $('#flt').innerHTML = tabs.map(([k, l]) => `<button data-f="${k}" class="${A.filter === k ? 'on' : ''}">${l}<i>${n[k] || 0}</i></button>`).join('');
+  const list = A.users.filter(u => (A.filter === 'all' || u.status === A.filter) && (!A.q || u.username.toLowerCase().includes(A.q)));
+  $('#cnt').textContent = `${list.length}명 표시`;
+  const now = Date.now();
+  $('#tb').innerHTML = list.length ? list.map(u => {
+    const self = u.id === A.me.id, locked = u.locked_until > now;
+    const st = {active:'<span class="badge b-active">활성</span>', pending:'<span class="badge b-pending">승인 대기</span>', disabled:'<span class="badge b-disabled">중지</span>'}[u.status];
+    const acts = [];
+    if (u.status === 'pending') acts.push(`<button class="btn sm ok" data-a="approve">승인</button><button class="btn ghost sm danger" data-a="reject">거절</button>`);
+    if (u.status === 'active' && !self) acts.push(`<button class="btn ghost sm" data-a="disable">중지</button>`);
+    if (u.status === 'disabled') acts.push(`<button class="btn ghost sm ok" data-a="enable">재사용</button>`);
+    if (!self && u.status === 'active') acts.push(u.role === 'admin' ? `<button class="btn ghost sm" data-a="user">관리자 해제</button>` : `<button class="btn ghost sm" data-a="admin">관리자 지정</button>`);
+    acts.push(`<button class="btn ghost sm" data-a="pw">비번 초기화</button>`);
+    if (locked) acts.push(`<button class="btn ghost sm" data-a="unlock">잠금 해제</button>`);
+    if (u.sessions && !self) acts.push(`<button class="btn ghost sm" data-a="kick">강제 로그아웃</button>`);
+    if (!self && u.status !== 'pending') acts.push(`<button class="btn ghost sm danger" data-a="del">삭제</button>`);
+    return `<tr data-id="${u.id}"><td class="num">${u.id}</td><td><b>${esc(u.username)}</b>${self ? '<span class="me">(나)</span>' : ''}</td>
+      <td>${st} ${locked ? '<span class="badge b-lock">잠김</span>' : ''}</td>
+      <td>${u.role === 'admin' ? '<span class="badge b-admin">관리자</span>' : '<span class="help">일반</span>'}</td>
+      <td>${fmtDate(u.created_at)}</td><td title="${fmtDate(u.last_login)}">${ago(u.last_login)}</td>
+      <td class="num">${u.items}개 · ${fmtBytes(u.bytes)}</td><td class="num">${u.sessions}</td>
+      <td><div class="acts">${acts.join('')}</div></td></tr>`;
+  }).join('') : `<tr><td colspan="9" class="empty">${A.filter === 'pending' ? '승인 대기 중인 회원이 없습니다.' : '회원이 없습니다.'}</td></tr>`;
+}
+async function onAction(e){
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const id = +b.closest('tr').dataset.id, u = A.users.find(x => x.id === id), a = b.dataset.a;
+  const patch = body => api('/api/admin/users/' + id, {method:'PATCH', body});
+  try{
+    b.disabled = true;
+    if (a === 'approve'){ await patch({status:'active'}); toast(`${u.username} 님을 승인했습니다.`); }
+    else if (a === 'reject'){ if (!confirm(`${u.username} 님의 가입 신청을 거절(삭제)할까요?`)) return; await api('/api/admin/users/' + id, {method:'DELETE'}); toast('가입 신청을 삭제했습니다.'); }
+    else if (a === 'disable'){ if (!confirm(`${u.username} 님의 사용을 중지할까요? 모든 기기에서 즉시 로그아웃됩니다.`)) return; await patch({status:'disabled'}); toast('사용을 중지했습니다.'); }
+    else if (a === 'enable'){ await patch({status:'active'}); toast('다시 사용할 수 있게 했습니다.'); }
+    else if (a === 'admin'){ if (!confirm(`${u.username} 님을 관리자로 지정할까요? 회원 관리 권한이 생깁니다.`)) return; await patch({role:'admin'}); toast('관리자로 지정했습니다.'); }
+    else if (a === 'user'){ await patch({role:'user'}); toast('관리자 권한을 해제했습니다.'); }
+    else if (a === 'pw'){
+      const p = prompt(`${u.username} 님의 새 비밀번호 (8자 이상)`); if (!p) return;
+      if (p.length < 8){ toast('8자 이상 입력하세요.'); return; }
+      await api(`/api/admin/users/${id}/password`, {method:'POST', body:{password:p}}); toast('비밀번호를 바꿨습니다. 기존 로그인은 모두 해제됩니다.', 4000);
+    }
+    else if (a === 'unlock'){ await api(`/api/admin/users/${id}/unlock`, {method:'POST'}); toast('잠금을 해제했습니다.'); }
+    else if (a === 'kick'){ await api(`/api/admin/users/${id}/logout`, {method:'POST'}); toast('모든 기기에서 로그아웃시켰습니다.'); }
+    else if (a === 'del'){ if (!confirm(`${u.username} 님을 삭제할까요?\n동기화된 즐겨찾기·작도(${u.items}개)도 함께 삭제되며 되돌릴 수 없습니다.`)) return; await api('/api/admin/users/' + id, {method:'DELETE'}); toast('회원을 삭제했습니다.'); }
+    await load();
+  }catch(x){ toast(x.message, 4000); }
+  finally{ b.disabled = false; }
+}
+boot();
+</script>
+</body>
+</html>
