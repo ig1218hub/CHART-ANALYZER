@@ -2076,10 +2076,10 @@ function toggleFav(a){
 }
 
 /* ---------------- 검색 ---------------- */
-let searchT, searchSeq = 0, kbIdx = -1, lastResults = [];
+let searchT, searchSeq = 0, kbIdx = -1, lastResults = [], resultsQ = '', enterBusy = false;  // resultsQ: 현재 lastResults가 어떤 검색어의 결과인지
 async function doSearch(q){
   q = q.trim(); const seq = ++searchSeq; const box = $('#results');
-  if (!q){ box.classList.remove('open'); return; }
+  if (!q){ resultsQ = ''; lastResults = []; box.classList.remove('open'); return; }
   const up = q.toUpperCase(), lo = q.toLowerCase();
   const groups = {국내:[], 해외:[], 코인:[]};
   // 국내 (이름/코드)
@@ -2095,6 +2095,7 @@ async function doSearch(q){
   if (up.length >= 2) for (const s of CM.bn){ if (s.endsWith('USDT')){ const b = s.slice(0, -4); if (!coinSeen.has(b) && (b === up || b.startsWith(up))){ coinSeen.add(b); groups.코인.push({type:'crypto', symbol:b, name:b, ex:'Binance'}); } } }
   groups.코인.sort((a, b) => (b.symbol === up) - (a.symbol === up) || a.symbol.length - b.symbol.length);
   groups.코인 = groups.코인.slice(0, 8);
+  resultsQ = q;
   renderResults(groups, true);
   // Yahoo 전세계 검색
   if (/[a-zA-Z0-9^]/.test(q)){
@@ -2260,7 +2261,9 @@ async function load(fresh){
   if (stock){
     await S.probe;
     if (id !== S.loadId) return;
-    if (S.engine === 'tv' || S.yahooDown){ showTV(); return; }
+    // 국내 종목은 TradingView 위젯이 KRX를 지원하지 않으므로, 서버 장애로 표시돼 있으면 한 번 더 확인 후 자체 엔진으로 시도
+    if (S.yahooDown && S.engine !== 'tv' && isKR(S.asset)){ S.probe = probeYahoo(); await S.probe; if (id !== S.loadId) return; }
+    if (S.engine === 'tv' || (S.yahooDown && !isKR(S.asset))){ showTV(); return; }
   }
   try{
     const d = await loadSeries(S.asset, S.tf);
@@ -2274,8 +2277,18 @@ async function load(fresh){
     if (id !== S.loadId) return;
     console.error(e);
     if (stock){
-      // 서버 연결 문제 또는 Yahoo에 없는 종목 → TradingView로 대체 표시
-      if (/proxy|fetch|abort|Failed|HTTP 5/i.test(String(e.message))) S.yahooDown = true;
+      // 종목 하나의 실패(잘못된 심볼·시간 초과)를 서버 장애로 단정하지 않는다 → 서버 상태를 다시 확인
+      if (/proxy|fetch|abort|Failed|HTTP 5/i.test(String(e.message))){
+        S.probe = probeYahoo(); await S.probe;
+        if (id !== S.loadId) return;
+      }
+      if (isKR(S.asset)){
+        // TradingView 무료 위젯은 KRX 종목을 표시하지 못하므로 빈 차트 대신 안내 + 다시 시도
+        hideTV(); setLive(false, '연결 실패');
+        showOverlay(S.yahooDown ? '주식 데이터 서버에 연결하지 못했습니다. 잠시 후 다시 시도하세요.' : '이 종목의 차트 데이터를 불러오지 못했습니다. 종목 코드를 확인해 주세요.', false, true);
+        return;
+      }
+      // 해외 종목: Yahoo에 없거나 서버 장애 → TradingView로 대체 표시
       showTV(true); return;
     }
     hideTV();
@@ -3043,7 +3056,7 @@ function bind(){
   const q = $('#q');
   q.addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(() => doSearch(q.value), 280); });
   q.addEventListener('focus', () => { if (q.value.trim()) $('#results').classList.add('open'); });
-  q.addEventListener('keydown', e => {
+  q.addEventListener('keydown', async e => {
     const rows = $$('#results .res-row');
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
       e.preventDefault(); if (!rows.length) return;
@@ -3051,12 +3064,23 @@ function bind(){
       rows.forEach((r, i) => r.classList.toggle('kb', i === kbIdx)); rows[kbIdx].scrollIntoView({block:'nearest'});
     } else if (e.key === 'Enter'){
       e.preventDefault();
-      if (kbIdx >= 0 && rows[kbIdx]){ pick(lastResults[+rows[kbIdx].dataset.i]); return; }
-      if (lastResults.length){ pick(lastResults[0]); return; }
-      const v = q.value.trim(); if (v) pick({type:'stock', symbol:v.toUpperCase(), name:v.toUpperCase()});
+      const v = q.value.trim(); if (!v) return;
+      // 현재 검색어의 결과가 이미 화면에 있으면 그대로 선택
+      if (resultsQ === v){
+        if (kbIdx >= 0 && rows[kbIdx]){ pick(lastResults[+rows[kbIdx].dataset.i]); return; }
+        if (lastResults.length){ pick(lastResults[0]); return; }
+      }
+      // 입력 직후(디바운스 280ms 전) Enter: 이전 검색어의 결과나 원문 그대로 열지 말고 검색을 먼저 끝낸다
+      if (enterBusy) return;
+      enterBusy = true; clearTimeout(searchT);
+      try{ await doSearch(v); } finally{ enterBusy = false; }
+      if (q.value.trim() !== v) return;            // 그 사이 입력이 바뀌었으면 중단
+      if (resultsQ === v && lastResults.length){ pick(lastResults[0]); return; }
+      // 결과가 없을 때만 티커로 직접 조회 (한글 등 티커 형식이 아니면 '검색 결과 없음'을 그대로 둔다)
+      if (/^[A-Za-z0-9^.=\-]+$/.test(v)) pick({type:'stock', symbol:v.toUpperCase(), name:v.toUpperCase()});
     } else if (e.key === 'Escape'){ $('#results').classList.remove('open'); q.blur(); }
   });
-  const pick = it => { $('#results').classList.remove('open'); q.value = ''; hideLanding(true); openAsset(it); };
+  const pick = it => { clearTimeout(searchT); searchSeq++; $('#results').classList.remove('open'); q.value = ''; hideLanding(true); openAsset(it); };
   $('#results').addEventListener('click', e => {
     const f = e.target.closest('[data-fav]');
     if (f){ e.stopPropagation(); const it = lastResults[+f.dataset.fav]; toggleFav(it); f.textContent = isFav(it) ? '★' : '☆'; f.classList.toggle('on', isFav(it)); return; }
